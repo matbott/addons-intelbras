@@ -11,7 +11,6 @@ RUN apk add --no-cache \
     mosquitto-clients \
     jq \
     curl \
-    make \
     ca-certificates
 
 # Instalar bashio (solo el archivo necesario)
@@ -23,7 +22,6 @@ RUN mkdir -p /usr/lib/bashio && \
 RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
 RUN chmod +x /alarme-intelbras/comandar
 WORKDIR /alarme-intelbras
-RUN make
 
 # Copiar y dar permisos al script principal
 COPY run.sh /run.sh
