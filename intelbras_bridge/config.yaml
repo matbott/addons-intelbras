@@ -63,3 +63,7 @@ schema:
   zone_count: int(1,64)
   zone_names: list(str)
   zone_types: list(str)
+log_level: info
+schema:
+  log_level: str
+
