@@ -2,7 +2,12 @@
 source /usr/lib/bashio/bashio.sh
 
 IP=$(bashio::config 'alarm_ip')
+PORT=$(bashio::config 'alarm_port')
+PASS=$(bashio::config 'alarm_password')
+
 echo "IP configurada: $IP"
+echo "Puerto configurado: $PORT"
+echo "Password configurado: $PASS"
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
