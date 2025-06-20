@@ -6,6 +6,12 @@ echo "IP configurada: $IP"
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
+echo "DEBUG - Variables recibidas:"
+echo "alarm_ip = $(bashio::config 'alarm_ip')"
+echo "alarm_port = $(bashio::config 'alarm_port')"
+echo "alarm_password = $(bashio::config 'alarm_password')"
+
+
 # --- FASE 1: LEER Y VALIDAR CONFIGURACIÓN ---
 ALARM_IP=$(bashio::config 'alarm_ip')
 ALARM_PORT=$(bashio::config 'alarm_port')
