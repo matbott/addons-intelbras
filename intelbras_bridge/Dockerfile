@@ -2,7 +2,9 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Instalar dependencias esenciales del sistema operativo
-RUN apk add --no-cache bashio git python3 py3-pip mosquitto-clients jq
+#RUN apk add --no-cache bashio git python3 py3-pip mosquitto-clients jq
+RUN apk add --no-cache bash git python3 py3-pip mosquitto-clients jq && \
+    wget -O /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/bashio.sh
 
 # Clonar el repositorio de alarme-intelbras
 # MÁS ADELANTE, REEMPLAZA ESTA LÍNEA CON LA URL DE TU FORK DE GITHUB
