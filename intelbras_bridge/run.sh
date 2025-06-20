@@ -18,6 +18,12 @@ echo "PASS_LEN=$(bashio::config 'password_length')"
 echo "ZONE_COUNT=$(bashio::config 'zone_count')"
 echo "POLLING_INTERVAL_MIN=$(bashio::config 'polling_interval_minutes')"
 
+OUTPUT=$(/alarme-intelbras/comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status)
+EXIT_CODE=$?
+echo "DEBUG - Resultado comando: ${EXIT_CODE}"
+echo "DEBUG - Salida del comando:"
+echo "${OUTPUT}"
+
 if bashio::var.is_empty "${ALARM_IP}" || bashio::var.is_empty "${ALARM_PASS}"; then
   bashio::log.fatal "Alarm Panel IP Address and Password are required. Please set them and restart."
   exit 1
