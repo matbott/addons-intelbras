@@ -19,7 +19,7 @@ RUN rm -rf /usr/lib/bashio* && \
     curl -sSL https://github.com/hassio-addons/bashio/archive/main.tar.gz | \
     tar -xz --strip-components=1 -C /tmp/bashio && \
     cp -r /tmp/bashio/lib/* /usr/lib/ && \
-    chmod +x /usr/lib/bashio && \
+    chmod +x /usr/lib/bashio/bashio.sh && \
     rm -rf /tmp/bashio
 
 # Clonar el proyecto
