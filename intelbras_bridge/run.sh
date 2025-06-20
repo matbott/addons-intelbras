@@ -2,12 +2,6 @@
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
-echo "DEBUG - Variables recibidas:"
-echo "alarm_ip = $(bashio::config 'alarm_ip')"
-echo "alarm_port = $(bashio::config 'alarm_port')"
-echo "alarm_password = $(bashio::config 'alarm_password')"
-
-
 # --- FASE 1: LEER Y VALIDAR CONFIGURACIÓN ---
 ALARM_IP=$(bashio::config 'alarm_ip')
 ALARM_PORT=$(bashio::config 'alarm_port')
@@ -15,6 +9,14 @@ ALARM_PASS=$(bashio::config 'alarm_password')
 PASS_LEN=$(bashio::config 'password_length')
 ZONE_COUNT=$(bashio::config 'zone_count')
 POLLING_INTERVAL_MIN=$(bashio::config 'polling_interval_minutes')
+
+echo "DEBUG - Variables recibidas:"
+echo "ALARM_IP=$(bashio::config 'alarm_ip')"
+echo "ALARM_PORT=$(bashio::config 'alarm_port')"
+echo "ALARM_PASS=$(bashio::config 'alarm_password')"
+echo "PASS_LEN=$(bashio::config 'password_length')"
+echo "ZONE_COUNT=$(bashio::config 'zone_count')"
+echo "POLLING_INTERVAL_MIN=$(bashio::config 'polling_interval_minutes')"
 
 if bashio::var.is_empty "${ALARM_IP}" || bashio::var.is_empty "${ALARM_PASS}"; then
   bashio::log.fatal "Alarm Panel IP Address and Password are required. Please set them and restart."
