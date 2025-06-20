@@ -1,22 +1,4 @@
 #!/usr/bin/with-contenv bashio
-#source /usr/lib/bashio/bashio.sh
-
-echo "🔍 Verificando bashio..."
-if ! bashio::config 'alarm_ip' &>/dev/null; then
-    echo "❌ Bashio no disponible o falló la lectura de config"
-    exit 1
-fi
-
-IP=$(bashio::config 'alarm_ip')
-PORT=$(bashio::config 'alarm_port')
-PASS=$(bashio::config 'alarm_password')
-
-echo "IP configurada: $IP"
-echo "Puerto configurado: $PORT"
-echo "Password configurado: $PASS"
-
-LOG=$(bashio::config 'log_level')
-echo "Nivel de log: $LOG"
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
