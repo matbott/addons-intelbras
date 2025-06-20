@@ -1,5 +1,8 @@
-#!/usr/bin/with-contenv bashio
-source /usr/lib/bashio.sh
+#!/usr/bin/env bash
+source /usr/lib/bashio/bashio.sh
+
+IP=$(bashio::config 'alarm_ip')
+echo "IP configurada: $IP"
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
