@@ -26,10 +26,34 @@ options:
   alarm_port: 9009
   alarm_password: "781152"
   password_length: 6
+  zone_count: 8
   polling_interval_minutes: 5
+  zone_names:
+    - "Front Door"
+    - "Back Door"
+    - "Living Room"
+    - "Kitchen"
+    - "Bedroom"
+    - "Garage"
+    - "Zone 7"
+    - "Zone 8"
+  zone_types:
+    - "door"
+    - "door"
+    - "motion"
+    - "motion"
+    - "motion"
+    - "garage_door"
+    - "motion"
+    - "motion"
 schema:
   alarm_ip: str
   alarm_port: port
   alarm_password: password(4,6)
   password_length: int(4,6)
+  zone_count: int(1,32)
   polling_interval_minutes: int(0,1440)
+  zone_names:
+    - str?
+  zone_types:
+    - list(door|garage_door|window|motion|smoke|gas|moisture|vibration|opening|sound|battery|cold|heat|light|lock|presence|problem|safety|tamper|power|moving|occupancy|plug|running|update|carbon_monoxide|gas|smoke)?
