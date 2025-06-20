@@ -28,7 +28,7 @@ options:
   mqtt_password: "W00d5tock99."
   alarm_ip: 192.168.1.7
   alarm_port: 9009
-  alarm_password: "781152"
+  alarm_password: 781152
   password_length: 6
   polling_interval_minutes: 5
   zone_count: 8
@@ -57,7 +57,7 @@ schema:
   mqtt_password: password
   alarm_ip: str
   alarm_port: port
-  alarm_password: password
+  alarm_password: int(1000,999999)
   password_length: int(4,8)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
