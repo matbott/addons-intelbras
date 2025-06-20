@@ -1,18 +1,29 @@
+# Usa la imagen base recomendada por Home Assistant
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Instalar dependencias esenciales del sistema operativo
-#RUN apk add --no-cache bashio git python3 py3-pip mosquitto-clients jq
-RUN apk add --no-cache bash git python3 py3-pip mosquitto-clients jq && \
-    wget -O /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/bashio.sh
+ENV LANG C.UTF-8
 
-# Clonar el repositorio de alarme-intelbras
-# MÁS ADELANTE, REEMPLAZA ESTA LÍNEA CON LA URL DE TU FORK DE GITHUB
+# Instalar dependencias del sistema operativo
+RUN apk add --no-cache \
+    bash \
+    git \
+    python3 \
+    py3-pip \
+    mosquitto-clients \
+    jq \
+    wget \
+    ca-certificates
+
+# Instalar bashio manualmente
+RUN wget -O /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/bashio.sh
+
+# Clonar el repositorio del bridge (cambiar a tu fork si es necesario)
 RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
 
-# Copiar nuestro script de ejecución al contenedor
-COPY run.sh /
-RUN chmod a+x /run.sh
+# Copiar el script de arranque
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
 
-# Ejecutar nuestro script cuando el contenedor del Add-on inicie
+# Comando de inicio del add-on
 CMD [ "/run.sh" ]
