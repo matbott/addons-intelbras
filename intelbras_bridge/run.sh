@@ -15,6 +15,9 @@ echo "IP configurada: $IP"
 echo "Puerto configurado: $PORT"
 echo "Password configurado: $PASS"
 
+LOG=$(bashio::config 'log_level')
+echo "Nivel de log: $LOG"
+
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
 echo "DEBUG - Variables recibidas:"
