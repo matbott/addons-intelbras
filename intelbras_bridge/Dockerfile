@@ -27,6 +27,6 @@ RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbra
 
 # Copiar y dar permisos al script principal
 COPY run.sh /run.sh
-RUN chmod +x /run.sh
+RUN chmod a+x /run.sh
 
 CMD [ "/run.sh" ]
