@@ -30,13 +30,11 @@ options:
   zone_names: []
   zone_types: []
 schema:
-  alarm_ip: "str"
-  alarm_port: "port"
-  alarm_password: "password"
-  password_length: "int(4,8)"
-  polling_interval_minutes: "int(0,1440)"
-  zone_count: "int(1,64)"
-  zone_names:
-    - "str"
-  zone_types:
-    - "list(match(^(door|window|motion|smoke|gas|carbon_monoxide|moisture|opening)$))"
+  alarm_ip: str
+  alarm_port: port
+  alarm_password: password
+  password_length: int(4,8)
+  polling_interval_minutes: int(0,1440)
+  zone_count: int(1,64)
+  zone_names: [str]
+  zone_types: [str]
