@@ -19,7 +19,7 @@ RUN mkdir -p /usr/lib/bashio && \
     chmod +x /usr/lib/bashio/bashio.sh
 
 # Clonar el proyecto (si lo necesitás dentro del contenedor)
-RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
+RUN git clone https://github.com/matbott/alarme-intelbras
 RUN chmod +x /alarme-intelbras/comandar
 WORKDIR /alarme-intelbras
 
