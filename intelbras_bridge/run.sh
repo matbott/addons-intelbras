@@ -43,7 +43,7 @@ if [ ${EXIT_CODE} -ne 0 ]; then
 fi
 
 # Si llegamos aquí, la conexión fue exitosa
-bashio::log.success "Connection to alarm panel verified successfully."
+bashio::log.info "Connection to alarm panel verified successfully."
 
 
 # --- FASE 3: CONFIGURACIÓN DE MQTT Y ENTIDADES ---
@@ -58,6 +58,8 @@ PORT=$(bashio::config 'mqtt_port')
 USER=$(bashio::config 'mqtt_user')
 PASS=$(bashio::config 'mqtt_password')
 MQTT_OPTS=(-h "$BROKER" -p "$PORT" -u "$USER" -P "$PASS")
+
+echo "MQTT_OPTS=(-h "$BROKER" -p "$PORT" -u "$USER" -P "$PASS")"
 
 bashio::log.info "Registering entities in Home Assistant via MQTT Discovery..."
 DEVICE_JSON="{\"identifiers\": [\"intelbras_amt8000_bridge\"], \"name\": \"Intelbras Alarm\", \"manufacturer\": \"Intelbras\", \"model\": \"AMT-8000\"}"
