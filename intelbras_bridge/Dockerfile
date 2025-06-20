@@ -1,6 +1,5 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
-
 ENV LANG C.UTF-8
 
 # Instalar paquetes necesarios
@@ -14,15 +13,15 @@ RUN apk add --no-cache \
     curl \
     ca-certificates
 
-# Instalar bashio manualmente
-RUN curl -sSL -o /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/lib/bashio.sh
+# Instalar bashio usando el método oficial
+RUN curl -sSL https://github.com/hassio-addons/bashio/releases/latest/download/bashio.tar.gz | \
+    tar -xz -C /usr/local/bin/
 
-# Clonar el proyecto (cambiar a tu fork si querés)
+# Clonar el proyecto
 RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
 
 # Copiar y dar permisos al script principal
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
-# Comando principal
 CMD [ "/run.sh" ]
