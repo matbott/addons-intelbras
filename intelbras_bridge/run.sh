@@ -79,7 +79,7 @@ for i in $(seq 1 "${ZONE_COUNT}"); do
   mosquitto_pub "${MQTT_OPTS[@]}" -r -t "homeassistant/binary_sensor/intelbras_amt8000/zone_${i}/config" \
     -m "{\"name\": \"${ZONE_NAME}\", \"unique_id\": \"intelbras_zone_${i}\", \"availability_topic\": \"${AVAILABILITY_TOPIC}\", \"payload_available\": \"online\", \"payload_not_available\": \"offline\", \"state_topic\": \"intelbras/zone/${i}/state\", \"payload_on\": \"ON\", \"payload_off\": \"OFF\", \"device_class\": \"${ZONE_TYPE}\", \"device\": ${DEVICE_JSON}}"
 done
-bashio::log.success "Entity registration complete."
+bashio::log.info "Entity registration complete."
 
 # --- FASE 4: FUNCIONES PRINCIPALES ---
 
