@@ -35,6 +35,10 @@ options:
   zone_names: []
   zone_types: []
 schema:
+  mqtt_broker: str
+  mqtt_port: port
+  mqtt_user: str
+  mqtt_password: password
   alarm_ip: str
   alarm_port: port
   alarm_password: password
