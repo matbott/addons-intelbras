@@ -1,4 +1,6 @@
-#!/usr/bin/with-contenv bashio
+#!/usr/bin/env bash
+source /usr/lib/bashio.sh
+
 
 bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
 
