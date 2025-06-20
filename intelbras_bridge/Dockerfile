@@ -13,8 +13,9 @@ RUN apk add --no-cache \
     curl \
     ca-certificates
 
-# Instalar bashio descargando el repositorio completo
-RUN curl -sSL https://github.com/hassio-addons/bashio/archive/main.tar.gz | \
+# Instalar bashio - crear directorio primero
+RUN mkdir -p /tmp/bashio && \
+    curl -sSL https://github.com/hassio-addons/bashio/archive/main.tar.gz | \
     tar -xz --strip-components=1 -C /tmp/bashio && \
     cp -r /tmp/bashio/lib/* /usr/lib/ && \
     chmod +x /usr/lib/bashio && \
