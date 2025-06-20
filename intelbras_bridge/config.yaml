@@ -34,7 +34,7 @@ schema:
   alarm_ip: str
   alarm_port: port
   alarm_password: password
-  password_length: int(6)
+  password_length: int(4,6)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
   zone_names: [str]
