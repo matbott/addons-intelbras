@@ -16,7 +16,8 @@ RUN apk add --no-cache \
     ca-certificates
 
 # Instalar bashio manualmente
-RUN wget -O /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/bashio.sh
+RUN apk add --no-cache curl && \
+    curl -sSL -o /usr/lib/bashio.sh https://raw.githubusercontent.com/hassio-addons/bashio/main/bashio.sh
 
 # Clonar el repositorio del bridge (cambiar a tu fork si es necesario)
 RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
