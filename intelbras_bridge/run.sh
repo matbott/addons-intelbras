@@ -147,6 +147,11 @@ function process_event_stream() {
 }
 
 # --- FASE 5: INICIAR OPERACIÓN ---
+
+# !! CAMBIO IMPORTANTE: Nos movemos al directorio de trabajo correcto !!
+cd /alarme-intelbras
+
+# AHORA SE EJECUTA LA FUNCIÓN POR PRIMERA VEZ
 poll_and_update_status
 
 if [[ ${POLLING_INTERVAL_MIN} -gt 0 ]]; then
