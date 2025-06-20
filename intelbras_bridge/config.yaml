@@ -14,6 +14,7 @@ homeassistant_api: true
 startup: "application"
 boot: "auto"
 init: false
+host_network: true
 services:
   - "mqtt:want"
 ports:
@@ -21,9 +22,9 @@ ports:
 ports_description:
   "9009/tcp": "Port for the alarm panel to send events to this Add-on"
 options:
-  alarm_ip: ""
+  alarm_ip: 192.168.1.7
   alarm_port: 9009
-  alarm_password: ""
+  alarm_password: 781152
   password_length: 6
   polling_interval_minutes: 5
   zone_count: 8
@@ -36,5 +37,22 @@ schema:
   password_length: int(4,8)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
-  zone_names: [str]
-  zone_types: [str]
+  zone_names:
+  - "Zona 1"
+  - "Zona 2"
+  - "Zona 3"
+  - "Zona 4"
+  - "Zona 5"
+  - "Zona 6"
+  - "Zona 7"
+  - "Zona 8"
+  zone_types:
+  - "opening"
+  - "opening"
+  - "motion"
+  - "motion"
+  - "smoke"
+  - "problem"
+  - "problem"
+  - "safety"
+
