@@ -53,5 +53,5 @@ schema:
   password_length: int(4,6)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
-  zone_names: [str]
-  zone_types: [select(opening,motion,smoke,problem,safety,door,window,glass,vibration,gas,flood,temperature)]
+  zone_names: list(str)
+  zone_types: list(str)
