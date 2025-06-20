@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     mosquitto-clients \
     jq \
     curl \
+    make \
     ca-certificates
 
 # Instalar bashio (solo el archivo necesario)
