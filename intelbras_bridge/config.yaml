@@ -33,6 +33,3 @@ schema:
   alarm_password: password(4,6)
   password_length: int(4,6)
   polling_interval_minutes: int(0,1440)
-    - str
-  zone_types:
-    - str
