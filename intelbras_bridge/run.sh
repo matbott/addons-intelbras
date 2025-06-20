@@ -38,7 +38,13 @@ MQTT_HOST=$(bashio::services "mqtt" "host")
 MQTT_PORT=$(bashio::services "mqtt" "port")
 MQTT_USER=$(bashio::services "mqtt" "username")
 MQTT_PASS=$(bashio::services "mqtt" "password")
-MQTT_OPTS="-h ${MQTT_HOST} -p ${MQTT_PORT} -u ${MQTT_USER} -P ${MQTT_PASS}"
+#MQTT_OPTS="-h ${MQTT_HOST} -p ${MQTT_PORT} -u ${MQTT_USER} -P ${MQTT_PASS}"
+
+BROKER=$(bashio::config 'mqtt_broker')
+PORT=$(bashio::config 'mqtt_port')
+USER=$(bashio::config 'mqtt_user')
+PASS=$(bashio::config 'mqtt_password')
+MQTT_OPTS=(-h "$BROKER" -p "$PORT" -u "$USER" -P "$PASS" -t "topic" -m "mensaje")
 
 bashio::log.info "Registering entities in Home Assistant via MQTT Discovery..."
 DEVICE_JSON="{\"identifiers\": [\"intelbras_amt8000_bridge\"], \"name\": \"Intelbras Alarm\", \"manufacturer\": \"Intelbras\", \"model\": \"AMT-8000\"}"
