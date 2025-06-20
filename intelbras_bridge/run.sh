@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-source /usr/lib/bashio/bashio.sh
+#!/usr/bin/with-contenv bashio
+#source /usr/lib/bashio/bashio.sh
 
 echo "🔍 Verificando bashio..."
 if ! bashio::config 'alarm_ip' &>/dev/null; then
