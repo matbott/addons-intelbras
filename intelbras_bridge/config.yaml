@@ -28,24 +28,8 @@ options:
   password_length: 6
   polling_interval_minutes: 5
   zone_count: 8
-  zone_names:
-    - "Zona 1"
-    - "Zona 2"
-    - "Zona 3"
-    - "Zona 4"
-    - "Zona 5"
-    - "Zona 6"
-    - "Zona 7"
-    - "Zona 8"
-  zone_types:
-    - "opening"
-    - "opening"
-    - "motion"
-    - "motion"
-    - "smoke"
-    - "problem"
-    - "problem"
-    - "safety"
+  zone_names: "Zona 1,Zona 2,Zona 3,Zona 4,Zona 5,Zona 6,Zona 7,Zona 8"
+  zone_types: "opening,opening,motion,motion,smoke,problem,problem,safety"
 schema:
   alarm_ip: str
   alarm_port: port
@@ -53,5 +37,5 @@ schema:
   password_length: int(4,6)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
-  zone_names: list(str)
-  zone_types: list(str)
+  zone_names: str
+  zone_types: str
