@@ -24,7 +24,7 @@ ports_description:
 options:
   alarm_ip: "192.168.1.7"
   alarm_port: 9009
-  alarm_password: "781152"
+  alarm_password: 781152
   password_length: 6
   polling_interval_minutes: 5
   zone_count: 8
@@ -54,4 +54,4 @@ schema:
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
   zone_names: list(str)
-  zone_types: list(match(^(door|window|motion|smoke|gas|carbon_monoxide|moisture|opening|problem|safety)$))
+  zone_types: list(str)
