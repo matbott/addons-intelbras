@@ -20,6 +20,8 @@ RUN mkdir -p /usr/lib/bashio && \
 
 # Clonar el proyecto (si lo necesitás dentro del contenedor)
 RUN git clone https://github.com/elvis-epx/alarme-intelbras.git /alarme-intelbras
+RUN chmod +x /alarme-intelbras/comandar
+RUN chmod +x /alarme-intelbras/comandar && ln -s /usr/bin/python3 /usr/bin/python
 
 # Copiar y dar permisos al script principal
 COPY run.sh /run.sh
