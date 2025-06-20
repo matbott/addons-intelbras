@@ -22,6 +22,10 @@ ports:
 ports_description:
   "9009/tcp": "Port for the alarm panel to send events to this Add-on"
 options:
+  mqtt_broker: "core-mosquitto"
+  mqtt_port: 1883
+  mqtt_user: "mqtt"
+  mqtt_password: "W00d5tock99."
   alarm_ip: ""
   alarm_port: 9009
   alarm_password: ""
