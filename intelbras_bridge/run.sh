@@ -48,28 +48,29 @@ publish_discovery() {
     local force_class=$5
     local expire=${6:-}
 
-    local payload=$(jq -n \
-        --arg name "$name" \
-        --arg obj_id "$object_id" \
-        --arg uid "$uid" \
-        --arg dev_class "$device_class" \
-        --argjson force_class "$force_class" \
-        --arg device_id "$DEVICE_ID" \
-        --arg expire_after "$expire" \
-        '{
-            name: $name,
-            state_topic: "intelbras/alarm/" + $uid,
-            unique_id: $uid,
-            device_class: ($force_class == true and $dev_class != "" ? $dev_class : null),
-            expire_after: ($expire_after != "" ? ($expire_after | tonumber) : null),
-            availability_topic: "intelbras/alarm/availability",
-            device: {
-                identifiers: [$device_id],
-                name: "Intelbras Alarm",
-                model: "AMT-8000",
-                manufacturer: "Intelbras"
-            }
-        }')
+    # Crear payload JSON de forma más simple
+    local payload='{'
+    payload+='"name":"'$name'",'
+    payload+='"state_topic":"intelbras/alarm/'$uid'",'
+    payload+='"unique_id":"'$uid'",'
+    
+    # Solo agregar device_class si force_class es true y device_class no está vacío
+    if [[ "$force_class" == "true" && -n "$device_class" ]]; then
+        payload+='"device_class":"'$device_class'",'
+    fi
+    
+    # Solo agregar expire_after si no está vacío
+    if [[ -n "$expire" ]]; then
+        payload+='"expire_after":'$expire','
+    fi
+    
+    payload+='"availability_topic":"intelbras/alarm/availability",'
+    payload+='"device":{'
+    payload+='"identifiers":["'$DEVICE_ID'"],'
+    payload+='"name":"Intelbras Alarm",'
+    payload+='"model":"AMT-8000",'
+    payload+='"manufacturer":"Intelbras"'
+    payload+='}}'
 
     mosquitto_pub "${MQTT_OPTS[@]}" -r \
         -t "${DISCOVERY_PREFIX}/binary_sensor/${DEVICE_ID}/${uid}/config" \
