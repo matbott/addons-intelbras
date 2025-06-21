@@ -105,26 +105,30 @@ fi
 log_with_timestamp "Binaries verified:"
 ls -la ./comandar ./receptorip
 
-# --- CREAR ARCHIVO DE CONFIGURACIÓN ---
-log_with_timestamp "Creating config.cfg..."
-cat > ./config.cfg <<EOF
-[geral]
-addr = 0.0.0.0
-porta_receptor = ${ALARM_PORT}
-caddr = ${ALARM_IP}
-cport = ${ALARM_PORT}
-senha_remota = ${ALARM_PASS}
-tamanho_senha = ${PASS_LEN}
-EOF
+# --- VERIFICAR Y ACTUALIZAR ARCHIVO DE CONFIGURACIÓN ---
+log_with_timestamp "Checking existing config.cfg..."
 
 if [[ ! -f "./config.cfg" ]]; then
-    bashio::log.fatal "Failed to create config.cfg"
+    bashio::log.fatal "config.cfg not found in repository"
     exit 1
 fi
 
-log_with_timestamp "config.cfg created successfully"
-log_with_timestamp "Config file contents:"
-cat ./config.cfg | sed "s/senha_remota = .*/senha_remota = [HIDDEN]/" # Ocultar password en logs
+log_with_timestamp "Original config.cfg found, backing up..."
+cp ./config.cfg ./config.cfg.backup
+
+log_with_timestamp "Updating config.cfg with addon parameters..."
+
+# Actualizar solo los parámetros necesarios usando sed
+sed -i "s/^addr = .*/addr = 0.0.0.0/" ./config.cfg
+sed -i "s/^port = .*/port = ${ALARM_PORT}/" ./config.cfg
+sed -i "s/^caddr = .*/caddr = ${ALARM_IP}/" ./config.cfg
+sed -i "s/^cport = .*/cport = ${ALARM_PORT}/" ./config.cfg
+sed -i "s/^senha = .*/senha = ${ALARM_PASS}/" ./config.cfg
+sed -i "s/^tamanho = .*/tamanho = ${PASS_LEN}/" ./config.cfg
+
+log_with_timestamp "config.cfg updated successfully"
+log_with_timestamp "Updated config.cfg contents (passwords hidden):"
+cat ./config.cfg | sed "s/senha = .*/senha = [HIDDEN]/"
 
 # --- PROBAR CONEXIÓN ---
 log_with_timestamp "Testing connection to alarm panel..."
