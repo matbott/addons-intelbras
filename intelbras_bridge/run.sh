@@ -58,7 +58,6 @@ publish_text_sensor_discovery() {
     mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${DISCOVERY_PREFIX}/sensor/${DEVICE_ID}/${uid}/config" -m "${payload}"
 }
 
-
 log "Setting up Home Assistant discovery..."
 # --- CAMBIO 1: Ahora se crean como sensores de texto con iconos personalizados ---
 publish_text_sensor_discovery "Estado Alarma" "state" "mdi:shield-lock"
@@ -70,11 +69,25 @@ for i in $(seq 1 "$ZONE_COUNT"); do
     publish_binary_sensor_discovery "Zona $i" "zone_${i}" "opening" "on" "off"
 done
 
-log "Updating config.cfg..."
-sed -i "s/^addr = .*/addr = 0.0.0.0/" ./config.cfg
-sed -i "s/^port = .*/port = ${ALARM_PORT}/" ./config.cfg
-sed -i "s/^caddr = .*/caddr = ${ALARM_IP}/" ./config.cfg
-sed -i "s/^cport = .*/cport = ${ALARM_PORT}/" ./config.cfg
+log "Generating config.cfg..."
+cat > config.cfg << EOF
+[receptorip]
+; interface de rede e porta do Receptor IP
+addr = 0.0.0.0
+port = ${ALARM_PORT}
+; Centrais cuja conexão aceitaremos - expressão regular
+centrais = .*
+; Número máximo de centrais conectadas e autenticadas simultâneas
+maxconn = 1
+; endereço e porta da central de alarme
+caddr = ${ALARM_IP}
+cport = ${ALARM_PORT}
+; senha de acesso remoto (usuário 98) e tamanho em digitos (4 ou 6)
+senha = ${PASS}
+tamanho = 6
+; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
+folder_dlfoto = .
+EOF
 log "config.cfg ready."
 
 log "Publishing availability and initial states..."
