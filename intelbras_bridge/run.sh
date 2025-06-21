@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-#
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
@@ -30,6 +30,14 @@ DEVICE_ID="intelbras_alarm"
 DISCOVERY_PREFIX="homeassistant"
 
 log "Config OK - Zones: ${ZONE_COUNT}"
+
+# --- Configuración receptorip (como en el script anterior) ---
+log "Updating config.cfg..."
+sed -i "s/^addr = .*/addr = 0.0.0.0/" ./config.cfg
+sed -i "s/^port = .*/port = ${ALARM_PORT}/" ./config.cfg
+sed -i "s/^caddr = .*/caddr = ${ALARM_IP}/" ./config.cfg
+sed -i "s/^cport = .*/cport = ${ALARM_PORT}/" ./config.cfg
+log "config.cfg ready."
 
 # Crear sensores por Discovery
 publish_discovery() {
@@ -128,7 +136,7 @@ handle_event_line() {
 }
 
 log "Starting receptorip..."
-cd /alarme-intelbras || exit 1
+# No cambiar de directorio, mantener como en el script anterior
 chmod +x receptorip
 
 ./receptorip config.cfg 2>&1 | while read -r line; do
