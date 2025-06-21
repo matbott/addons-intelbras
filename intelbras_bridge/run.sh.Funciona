@@ -1,4 +1,5 @@
 #!/usr/bin/with-contenv bashio
+#Funciona pero despues de un tiempo el addon iniciado se cae
 
 # Función para logging con timestamp
 log_with_timestamp() {
