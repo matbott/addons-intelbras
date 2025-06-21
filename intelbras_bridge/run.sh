@@ -31,15 +31,22 @@ PORT=$(bashio::config 'mqtt_port')
 USER=$(bashio::config 'mqtt_user')
 PASS=$(bashio::config 'mqtt_password')
 
+# Cargar configuración de zonas
+ZONE_NAMES=$(bashio::config 'zone_names' || echo "[]")
+ZONE_TYPES=$(bashio::config 'zone_types' || echo "[]")
+
 # Mostrar configuración (sin mostrar passwords completas)
 log_with_timestamp "Configuration loaded:"
 log_with_timestamp "  - Alarm IP: ${ALARM_IP}"
 log_with_timestamp "  - Alarm Port: ${ALARM_PORT}"
 log_with_timestamp "  - Password Length: ${PASS_LEN}"
 log_with_timestamp "  - Zone Count: ${ZONE_COUNT}"
+log_with_timestamp "  - Zone Names: ${ZONE_NAMES}"
+log_with_timestamp "  - Zone Types: ${ZONE_TYPES}"
 log_with_timestamp "  - Polling Interval: ${POLLING_INTERVAL_MIN} minutes"
 log_with_timestamp "  - MQTT Broker: ${BROKER}:${PORT}"
 log_with_timestamp "  - MQTT User: ${USER}"
+log_with_timestamp "  - Host Network: enabled (port 9009 available)"
 
 # Validar configuración crítica
 if [[ -z "${ALARM_IP}" || -z "${ALARM_PORT}" || -z "${ALARM_PASS}" ]]; then
@@ -59,25 +66,44 @@ if [[ -n "${USER}" ]]; then
 fi
 AVAILABILITY_TOPIC="intelbras/alarm/availability"
 
-# --- PREPARAR DIRECTORIO DE TRABAJO ---
-log_with_timestamp "Setting up working directory..."
-cd /alarme-intelbras || {
-    bashio::log.fatal "Cannot access /alarme-intelbras directory"
-    exit 1
-}
+# --- VERIFICAR DIRECTORIO DE TRABAJO ---
+log_with_timestamp "Current working directory: $(pwd)"
+log_with_timestamp "Contents of current directory:"
+ls -la
 
-# Verificar que los binarios existen
+# El Dockerfile ya establece WORKDIR en /alarme-intelbras, así que ya deberíamos estar ahí
+if [[ "$(pwd)" != "/alarme-intelbras" ]]; then
+    log_with_timestamp "Not in expected directory, changing to /alarme-intelbras"
+    cd /alarme-intelbras || {
+        bashio::log.fatal "Cannot access /alarme-intelbras directory"
+        exit 1
+    }
+fi
+
+# Verificar que los binarios existen y tienen permisos
+log_with_timestamp "Checking binaries..."
+if [[ ! -f "./comandar" ]]; then
+    bashio::log.fatal "./comandar not found"
+    exit 1
+fi
+
 if [[ ! -x "./comandar" ]]; then
-    bashio::log.fatal "./comandar not found or not executable"
+    log_with_timestamp "comandar found but not executable, fixing permissions..."
+    chmod +x ./comandar
+fi
+
+if [[ ! -f "./receptorip" ]]; then
+    bashio::log.fatal "./receptorip not found"
     exit 1
 fi
 
 if [[ ! -x "./receptorip" ]]; then
-    bashio::log.fatal "./receptorip not found or not executable"
-    exit 1
+    log_with_timestamp "receptorip found but not executable, fixing permissions..."
+    chmod +x ./receptorip
 fi
 
-log_with_timestamp "Binaries found and executable"
+log_with_timestamp "Binaries verified:"
+ls -la ./comandar ./receptorip
 
 # --- CREAR ARCHIVO DE CONFIGURACIÓN ---
 log_with_timestamp "Creating config.cfg..."
@@ -97,18 +123,32 @@ if [[ ! -f "./config.cfg" ]]; then
 fi
 
 log_with_timestamp "config.cfg created successfully"
+log_with_timestamp "Config file contents:"
+cat ./config.cfg | sed "s/senha_remota = .*/senha_remota = [HIDDEN]/" # Ocultar password en logs
 
 # --- PROBAR CONEXIÓN ---
 log_with_timestamp "Testing connection to alarm panel..."
-COMMAND_TO_RUN="./comandar ${ALARM_IP} ${ALARM_PORT} ${ALARM_PASS} ${PASS_LEN} status"
+COMMAND_TO_RUN="./comandar ${ALARM_IP} ${ALARM_PORT} [HIDDEN_PASS] ${PASS_LEN} status"
 log_with_timestamp "Executing: ${COMMAND_TO_RUN}"
 
-OUTPUT=$(./comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status 2>&1)
+# Primero verificar que el comando existe y se puede ejecutar
+log_with_timestamp "Testing binary execution..."
+if ! ./comandar --help >/dev/null 2>&1; then
+    log_with_timestamp "Testing basic execution of comandar..."
+    ./comandar 2>&1 | head -5 || true
+fi
+
+log_with_timestamp "Attempting connection to alarm..."
+OUTPUT=$(timeout 30 ./comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status 2>&1)
 EXIT_CODE=$?
 
 log_with_timestamp "Command exit code: ${EXIT_CODE}"
 
-if [[ ${EXIT_CODE} -ne 0 ]]; then
+if [[ ${EXIT_CODE} -eq 124 ]]; then
+    bashio::log.error "Connection test timed out after 30 seconds"
+    bashio::log.fatal "Alarm panel not responding. Check network connectivity."
+    exit 1
+elif [[ ${EXIT_CODE} -ne 0 ]]; then
     bashio::log.error "Connection test failed with exit code ${EXIT_CODE}"
     bashio::log.error "Output: ${OUTPUT}"
     bashio::log.fatal "Cannot connect to alarm panel. Check configuration."
@@ -116,7 +156,7 @@ if [[ ${EXIT_CODE} -ne 0 ]]; then
 fi
 
 log_with_timestamp "Connection test successful"
-log_with_timestamp "Alarm status output: ${OUTPUT}"
+log_with_timestamp "Alarm status output (first 3 lines): $(echo "${OUTPUT}" | head -3)"
 
 # --- PUBLICAR DISPONIBILIDAD INICIAL ---
 log_with_timestamp "Publishing initial availability..."
@@ -148,11 +188,19 @@ while true; do
     log_with_timestamp "Starting receptorip (attempt $((RESTART_COUNT + 1)))..."
     log_with_timestamp "Executing: ./receptorip config.cfg"
     
-    # Ejecutar receptorip y procesar su salida
-    ./receptorip config.cfg 2>&1 | process_events
+    # Marcar como online antes de iniciar
+    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "online" 2>/dev/null || true
+    
+    # Ejecutar receptorip con timeout y procesar su salida
+    timeout 300 ./receptorip config.cfg 2>&1 | process_events
     
     EXIT_CODE=$?
-    log_with_timestamp "receptorip exited with code: ${EXIT_CODE}"
+    
+    if [[ ${EXIT_CODE} -eq 124 ]]; then
+        log_with_timestamp "receptorip timed out after 5 minutes, restarting..."
+    else
+        log_with_timestamp "receptorip exited with code: ${EXIT_CODE}"
+    fi
     
     # Marcar como offline
     mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline" 2>/dev/null || true
@@ -164,12 +212,13 @@ while true; do
         exit 1
     fi
     
-    log_with_timestamp "receptorip stopped. Restarting in 10 seconds... (${RESTART_COUNT}/${MAX_RESTARTS})"
-    sleep 10
+    SLEEP_TIME=$((10 + RESTART_COUNT * 5)) # Backoff incremental
+    log_with_timestamp "receptorip stopped. Restarting in ${SLEEP_TIME} seconds... (${RESTART_COUNT}/${MAX_RESTARTS})"
+    sleep ${SLEEP_TIME}
     
-    # Reset contador si ha pasado tiempo suficiente sin fallos
-    if [[ ${RESTART_COUNT} -gt 0 ]] && [[ $(($(date +%s) % 300)) -eq 0 ]]; then
+    # Reset contador después de 30 minutos sin fallos
+    if [[ ${RESTART_COUNT} -gt 0 ]] && [[ $(($(date +%s) % 1800)) -eq 0 ]]; then
         RESTART_COUNT=0
-        log_with_timestamp "Reset restart counter"
+        log_with_timestamp "Reset restart counter after stable period"
     fi
 done
