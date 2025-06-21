@@ -70,7 +70,7 @@ for i in $(seq 1 "$ZONE_COUNT"); do
 done
 
 log "Generating config.cfg..."
-cat > config.cfg << EOF
+cat > alarme-intelbras/config.cfg << EOF
 [receptorip]
 ; interface de rede e porta do Receptor IP
 addr = 0.0.0.0
@@ -102,7 +102,7 @@ done
 
 log "Starting receptorip..."
 declare -A ACTIVE_ZONES=()
-./receptorip config.cfg 2>&1 | while IFS= read -r line; do
+./alarme-intelbras/receptorip alarme-intelbras/config.cfg 2>&1 | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     log "Event: $line"
 
