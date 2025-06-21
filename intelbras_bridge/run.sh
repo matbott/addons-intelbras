@@ -57,10 +57,13 @@ MQTT_OPTS=(-h "$BROKER" -p "$PORT")
 AVAILABILITY_TOPIC="intelbras/alarm/availability"
 
 log_with_timestamp "Checking current directory: $(pwd)"
-[[ "$(pwd)" != "/alarme-intelbras" ]] && cd /alarme-intelbras || {
-    bashio::log.fatal "Cannot access /alarme-intelbras"
-    exit 1
-}
+
+if [[ "$(pwd)" != "/alarme-intelbras" ]]; then
+    cd /alarme-intelbras || {
+        bashio::log.fatal "Cannot access /alarme-intelbras"
+        exit 1
+    }
+fi
 
 chmod +x ./comandar ./receptorip
 ls -la ./comandar ./receptorip
