@@ -24,7 +24,7 @@ senha = int(config['senha'])
 tam_senha = int(config['tamanho'])
 centrais = re.compile("" + config['centrais'])
 maxconn = int(config['maxconn'])
-logfile = config["logfile"]
+#logfile = config["logfile"]
 Log.set_level(Log.INFO)
 Log.set_file(logfile)
 folder_dlfoto = config['folder_dlfoto']
