@@ -25,7 +25,7 @@ RUN mkdir -p /usr/lib/bashio && \
 #RUN git clone https://github.com/matbott/alarme-intelbras /alarme-intelbras
 
 # Establecer el directorio de trabajo. ¡Esto es muy importante!
-COPY . /alarme-intelbras
+COPY alarme-intelbras /alarme-intelbras
 
 WORKDIR /alarme-intelbras
 
