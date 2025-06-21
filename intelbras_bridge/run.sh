@@ -5,66 +5,51 @@ log() {
 }
 
 cleanup() {
-    log "Shutting down..."
-    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline"
+    log "Shutting down addon..."
+    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline" || true
     exit 0
 }
 trap cleanup SIGTERM SIGINT
 
 log "=== Starting Intelbras MQTT Bridge Add-on ==="
 
-# Config
-ALARM_IP=$(bashio::config 'alarm_ip')
+# --- Configuración ---
 ALARM_PORT=$(bashio::config 'alarm_port')
-ALARM_PASS=$(bashio::config 'alarm_password')
-PASS_LEN=$(bashio::config 'password_length')
+ALARM_IP=$(bashio::config 'alarm_ip')
 ZONE_COUNT=$(bashio::config 'zone_count')
 BROKER=$(bashio::config 'mqtt_broker')
 PORT=$(bashio::config 'mqtt_port')
 USER=$(bashio::config 'mqtt_user')
 PASS=$(bashio::config 'mqtt_password')
 
-MQTT_OPTS=(-h "$BROKER" -p "$PORT" -u "$USER" -P "$PASS")
+MQTT_OPTS=(-h "$BROKER" -p "$PORT")
+[[ -n "$USER" ]] && MQTT_OPTS+=(-u "$USER" -P "$PASS")
+
 AVAILABILITY_TOPIC="intelbras/alarm/availability"
+STATE_TOPIC="intelbras/alarm/state"
 DEVICE_ID="intelbras_alarm"
 DISCOVERY_PREFIX="homeassistant"
 
-log "Config OK - Zones: ${ZONE_COUNT}"
+log "MQTT broker: $BROKER:$PORT, user: $USER"
+log "Alarm IP: $ALARM_IP, port: $ALARM_PORT"
+log "Zone count: $ZONE_COUNT"
 
-# --- Configuración receptorip (como en el script anterior) ---
-log "Updating config.cfg..."
-sed -i "s/^addr = .*/addr = 0.0.0.0/" ./config.cfg
-sed -i "s/^port = .*/port = ${ALARM_PORT}/" ./config.cfg
-sed -i "s/^caddr = .*/caddr = ${ALARM_IP}/" ./config.cfg
-sed -i "s/^cport = .*/cport = ${ALARM_PORT}/" ./config.cfg
-log "config.cfg ready."
-
-# Crear sensores por Discovery
+# --- Función de Discovery (simplificada) ---
 publish_discovery() {
     local name=$1
-    local object_id=$2
-    local uid=$3
-    local device_class=$4
-    local force_class=$5
-    local expire=${6:-}
-
-    # Crear payload JSON de forma más simple
+    local uid=$2
+    local device_class=$3
+    
     local payload='{'
     payload+='"name":"'$name'",'
     payload+='"state_topic":"intelbras/alarm/'$uid'",'
     payload+='"unique_id":"'$uid'",'
     
-    # Solo agregar device_class si force_class es true y device_class no está vacío
-    if [[ "$force_class" == "true" && -n "$device_class" ]]; then
+    if [[ -n "$device_class" ]]; then
         payload+='"device_class":"'$device_class'",'
     fi
     
-    # Solo agregar expire_after si no está vacío
-    if [[ -n "$expire" ]]; then
-        payload+='"expire_after":'$expire','
-    fi
-    
-    payload+='"availability_topic":"intelbras/alarm/availability",'
+    payload+='"availability_topic":"'$AVAILABILITY_TOPIC'",'
     payload+='"device":{'
     payload+='"identifiers":["'$DEVICE_ID'"],'
     payload+='"name":"Intelbras Alarm",'
@@ -77,73 +62,84 @@ publish_discovery() {
         -m "${payload}"
 }
 
-# Alarm state
-publish_discovery "Alarm State" "alarm_state" "alarm_state" "" true
-# Alarm sounding
-publish_discovery "Alarm Sounding" "alarm_sounding" "alarm_sounding" "safety" true
-# Panic
-publish_discovery "Panic" "panic" "panic" "safety" true
-# Zonas
+# --- Crear dispositivos Discovery ---
+log "Setting up Home Assistant discovery..."
+publish_discovery "Alarm State" "state" ""
+publish_discovery "Alarm Sounding" "sounding" "safety"
+publish_discovery "Panic" "panic" "safety"
+
+# Crear zonas
 for i in $(seq 1 "$ZONE_COUNT"); do
-    publish_discovery "Zone $i" "zone_${i}" "zone_${i}" "opening" true
+    publish_discovery "Zone $i" "zone_${i}" "opening"
 done
 
-# Publicar estados iniciales
+# --- Configuración receptorip ---
+log "Updating config.cfg..."
+sed -i "s/^addr = .*/addr = 0.0.0.0/" ./config.cfg
+sed -i "s/^port = .*/port = ${ALARM_PORT}/" ./config.cfg
+sed -i "s/^caddr = .*/caddr = ${ALARM_IP}/" ./config.cfg
+sed -i "s/^cport = .*/cport = ${ALARM_PORT}/" ./config.cfg
+log "config.cfg ready."
+
+# --- Estados iniciales ---
+log "Publishing availability and initial states..."
 mosquitto_pub "${MQTT_OPTS[@]}" -r -t "$AVAILABILITY_TOPIC" -m "online"
-mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_state" -m "disarmed"
-mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_sounding" -m "off"
+mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/state" -m "disarmed"
+mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/sounding" -m "off"
 mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/panic" -m "off"
+
 for i in $(seq 1 "$ZONE_COUNT"); do
     mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/zone_${i}" -m "off"
 done
 
-# Zonas activas
+# --- Variables para tracking ---
 declare -A ACTIVE_ZONES=()
-panic_timer_pid=""
 
-handle_event_line() {
-    local line="$1"
-
-    if [[ "$line" == *"Ativacao remota app P1"* ]]; then
-        log "Alarm armed"
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_state" -m "armed"
-
-    elif [[ "$line" == *"Desativacao remota app P1"* ]]; then
-        log "Alarm disarmed"
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_state" -m "disarmed"
-
-    elif [[ "$line" =~ Disparo\ de\ zona\ ([0-9]+) ]]; then
-        local zone="${BASH_REMATCH[1]}"
-        log "Zone $zone triggered"
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/zone_${zone}" -m "on"
-        ACTIVE_ZONES["$zone"]=1
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_sounding" -m "on"
-
-    elif [[ "$line" =~ Restauracao\ de\ zona\ ([0-9]+) ]]; then
-        local zone="${BASH_REMATCH[1]}"
-        log "Zone $zone restored"
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/zone_${zone}" -m "off"
-        unset ACTIVE_ZONES["$zone"]
-
-        if [[ ${#ACTIVE_ZONES[@]} -eq 0 ]]; then
-            mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/alarm_sounding" -m "off"
+# --- Ejecutar receptorip y procesar eventos ---
+log "Starting receptorip..."
+./receptorip config.cfg 2>&1 | while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    log "Event: $line"
+    
+    # Eventos de armado/desarmado
+    if echo "$line" | grep -q "Ativacao remota app"; then
+        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/state" -m "armed"
+        log "Alarm state set to: armed"
+        
+    elif echo "$line" | grep -q "Desativacao remota app"; then
+        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/state" -m "disarmed"
+        log "Alarm state set to: disarmed"
+        
+    # Eventos de zonas
+    elif echo "$line" | grep -q "Disparo de zona"; then
+        if [[ "$line" =~ Disparo\ de\ zona\ ([0-9]+) ]]; then
+            local zone="${BASH_REMATCH[1]}"
+            log "Zone $zone triggered"
+            mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/zone_${zone}" -m "on"
+            ACTIVE_ZONES["$zone"]=1
+            mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/sounding" -m "on"
         fi
-
-    elif [[ "$line" == *"Panico silencioso"* ]]; then
+        
+    elif echo "$line" | grep -q "Restauracao de zona"; then
+        if [[ "$line" =~ Restauracao\ de\ zona\ ([0-9]+) ]]; then
+            local zone="${BASH_REMATCH[1]}"
+            log "Zone $zone restored"
+            mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/zone_${zone}" -m "off"
+            unset ACTIVE_ZONES["$zone"]
+            
+            # Si no hay zonas activas, apagar alarma
+            if [[ ${#ACTIVE_ZONES[@]} -eq 0 ]]; then
+                mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/sounding" -m "off"
+            fi
+        fi
+        
+    # Evento de pánico
+    elif echo "$line" | grep -q "Panico silencioso"; then
         log "Panic triggered"
         mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/panic" -m "on"
+        # Auto-reset pánico después de 30 segundos
         (sleep 30 && mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/panic" -m "off") &
     fi
-}
-
-log "Starting receptorip..."
-# No cambiar de directorio, mantener como en el script anterior
-chmod +x receptorip
-
-./receptorip config.cfg 2>&1 | while read -r line; do
-    if [[ "$line" == *"Event:"* ]]; then
-        clean_line="${line#*Event: }"
-        log "Event: $clean_line"
-        handle_event_line "$clean_line"
-    fi
 done
+
+cleanup
