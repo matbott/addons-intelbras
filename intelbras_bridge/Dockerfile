@@ -12,18 +12,17 @@ RUN apk add --no-cache \
     jq \
     curl \
     ca-certificates \
-    # --- DEPENDENCIAS AÑADIDAS PARA LOS BINARIOS ---
     libstdc++ \
     openssl
 
-# Instalar bashio (solo el archivo necesario) - Esto está bien, lo dejamos
+# Instalar bashio
 RUN mkdir -p /usr/lib/bashio && \
     curl -sSL https://raw.githubusercontent.com/hassio-addons/bashio/main/lib/bashio.sh -o /usr/lib/bashio/bashio.sh && \
     chmod +x /usr/lib/bashio/bashio.sh
 
 # Clonar el proyecto
 # La ruta /alarme-intelbras es correcta
-RUN git clone https://github.com/matbott/alarme-intelbras /alarme-intelbras
+#RUN git clone https://github.com/matbott/alarme-intelbras /alarme-intelbras
 
 # Establecer el directorio de trabajo. ¡Esto es muy importante!
 WORKDIR /alarme-intelbras
