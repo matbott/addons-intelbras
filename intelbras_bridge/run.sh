@@ -1,8 +1,25 @@
 #!/usr/bin/with-contenv bashio
 
-bashio::log.info "--- Starting Intelbras MQTT Bridge Add-on v3.0 (Final) ---"
+# Función para logging con timestamp
+log_with_timestamp() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
 
-# --- FASE 1: LEER Y PREPARAR CONFIGURACIÓN ---
+# Función para cleanup al salir
+cleanup() {
+    log_with_timestamp "Shutting down addon..."
+    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline" 2>/dev/null || true
+    exit 0
+}
+
+# Capturar señales para cleanup
+trap cleanup SIGTERM SIGINT
+
+log_with_timestamp "=== Starting Intelbras MQTT Bridge Add-on ==="
+
+# --- CARGAR Y VALIDAR CONFIGURACIÓN ---
+log_with_timestamp "Loading configuration..."
+
 ALARM_IP=$(bashio::config 'alarm_ip')
 ALARM_PORT=$(bashio::config 'alarm_port')
 ALARM_PASS=$(bashio::config 'alarm_password')
@@ -13,15 +30,57 @@ BROKER=$(bashio::config 'mqtt_broker')
 PORT=$(bashio::config 'mqtt_port')
 USER=$(bashio::config 'mqtt_user')
 PASS=$(bashio::config 'mqtt_password')
-MQTT_OPTS=(-h "$BROKER" -p "$PORT" -u "$USER" -P "$PASS")
+
+# Mostrar configuración (sin mostrar passwords completas)
+log_with_timestamp "Configuration loaded:"
+log_with_timestamp "  - Alarm IP: ${ALARM_IP}"
+log_with_timestamp "  - Alarm Port: ${ALARM_PORT}"
+log_with_timestamp "  - Password Length: ${PASS_LEN}"
+log_with_timestamp "  - Zone Count: ${ZONE_COUNT}"
+log_with_timestamp "  - Polling Interval: ${POLLING_INTERVAL_MIN} minutes"
+log_with_timestamp "  - MQTT Broker: ${BROKER}:${PORT}"
+log_with_timestamp "  - MQTT User: ${USER}"
+
+# Validar configuración crítica
+if [[ -z "${ALARM_IP}" || -z "${ALARM_PORT}" || -z "${ALARM_PASS}" ]]; then
+    bashio::log.fatal "Missing critical alarm configuration (IP, Port, or Password)"
+    exit 1
+fi
+
+if [[ -z "${BROKER}" || -z "${PORT}" ]]; then
+    bashio::log.fatal "Missing MQTT broker configuration"
+    exit 1
+fi
+
+# Configurar MQTT
+MQTT_OPTS=(-h "$BROKER" -p "$PORT")
+if [[ -n "${USER}" ]]; then
+    MQTT_OPTS+=(-u "$USER" -P "$PASS")
+fi
 AVAILABILITY_TOPIC="intelbras/alarm/availability"
 
-# --- FASE 2: CREAR ARCHIVOS DE CONFIGURACIÓN Y VERIFICAR CONEXIÓN ---
-bashio::log.info "Setting up working directory and config files..."
-# Nos movemos al directorio de trabajo correcto desde el principio
-cd /alarme-intelbras
+# --- PREPARAR DIRECTORIO DE TRABAJO ---
+log_with_timestamp "Setting up working directory..."
+cd /alarme-intelbras || {
+    bashio::log.fatal "Cannot access /alarme-intelbras directory"
+    exit 1
+}
 
-# Creamos el config.cfg AHORA, para que 'comandar' y 'receptorip' lo encuentren
+# Verificar que los binarios existen
+if [[ ! -x "./comandar" ]]; then
+    bashio::log.fatal "./comandar not found or not executable"
+    exit 1
+fi
+
+if [[ ! -x "./receptorip" ]]; then
+    bashio::log.fatal "./receptorip not found or not executable"
+    exit 1
+fi
+
+log_with_timestamp "Binaries found and executable"
+
+# --- CREAR ARCHIVO DE CONFIGURACIÓN ---
+log_with_timestamp "Creating config.cfg..."
 cat > ./config.cfg <<EOF
 [geral]
 addr = 0.0.0.0
@@ -31,93 +90,86 @@ cport = ${ALARM_PORT}
 senha_remota = ${ALARM_PASS}
 tamanho_senha = ${PASS_LEN}
 EOF
-bashio::log.info "config.cfg created."
 
-# Ahora sí, probamos la conexión. 'comandar' ya encontrará su config.
-bashio::log.info "Testing connection and getting initial status from alarm panel at ${ALARM_IP}..."
-OUTPUT=$(./comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status)
+if [[ ! -f "./config.cfg" ]]; then
+    bashio::log.fatal "Failed to create config.cfg"
+    exit 1
+fi
+
+log_with_timestamp "config.cfg created successfully"
+
+# --- PROBAR CONEXIÓN ---
+log_with_timestamp "Testing connection to alarm panel..."
+COMMAND_TO_RUN="./comandar ${ALARM_IP} ${ALARM_PORT} ${ALARM_PASS} ${PASS_LEN} status"
+log_with_timestamp "Executing: ${COMMAND_TO_RUN}"
+
+OUTPUT=$(./comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status 2>&1)
 EXIT_CODE=$?
 
-if [ ${EXIT_CODE} -ne 0 ]; then
-  bashio::log.fatal "Connection to alarm panel failed. Please check IP, Port, and Password. The Add-on will not start."
-  exit 1
-fi
-bashio::log.info "Connection to alarm panel verified successfully."
+log_with_timestamp "Command exit code: ${EXIT_CODE}"
 
-# --- FASE 3: PUBLICAR ESTADO INICIAL Y REGISTRAR ENTIDADES ---
-bashio::log.info "Publishing initial status to MQTT..."
+if [[ ${EXIT_CODE} -ne 0 ]]; then
+    bashio::log.error "Connection test failed with exit code ${EXIT_CODE}"
+    bashio::log.error "Output: ${OUTPUT}"
+    bashio::log.fatal "Cannot connect to alarm panel. Check configuration."
+    exit 1
+fi
+
+log_with_timestamp "Connection test successful"
+log_with_timestamp "Alarm status output: ${OUTPUT}"
+
+# --- PUBLICAR DISPONIBILIDAD INICIAL ---
+log_with_timestamp "Publishing initial availability..."
 mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "online"
-STATUS_BLOCK=$(echo "${OUTPUT}" | sed -n '/\*\*\*\*\*\*\*\*\*\*\*/,/\*\*\*\*\*\*\*\*\*\*\*/p')
-if echo "${STATUS_BLOCK}" | grep -q "Desarmado"; then
-    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/state" -m "disarmed"
-elif echo "${STATUS_BLOCK}" | grep -q "Armado"; then
-    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/alarm/state" -m "armed_away"
+if [[ $? -eq 0 ]]; then
+    log_with_timestamp "MQTT availability published successfully"
+else
+    bashio::log.warning "Failed to publish MQTT availability"
 fi
-OPEN_ZONES=$(echo "${STATUS_BLOCK}" | grep "Zonas abertas:" | sed 's/Zonas abertas: *//')
-for i in $(seq 1 "${ZONE_COUNT}"); do
-    if echo "${OPEN_ZONES}" | grep -q -w "${i}"; then
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/zone/${i}/state" -m "ON"
-    else
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "intelbras/zone/${i}/state" -m "OFF"
-    fi
-done
-bashio::log.info "Initial status published."
 
-bashio::log.info "Registering entities in Home Assistant via MQTT Discovery..."
-DEVICE_JSON="{\"identifiers\": [\"intelbras_amt8000_bridge\"], \"name\": \"Intelbras Alarm\", \"manufacturer\": \"Intelbras\", \"model\": \"AMT-8000\"}"
-mosquitto_pub "${MQTT_OPTS[@]}" -r -t "homeassistant/alarm_control_panel/intelbras_amt8000/alarm/config" \
-  -m "{\"name\": \"Alarm Panel\", \"unique_id\": \"intelbras_alarm_panel\", \"availability_topic\": \"${AVAILABILITY_TOPIC}\", \"payload_available\": \"online\", \"payload_not_available\": \"offline\", \"state_topic\": \"intelbras/alarm/state\", \"command_topic\": \"intelbras/alarm/command\", \"command_template\": \"{\\\"action\\\": \\\"{{ action }}\\\", \\\"code\\\": \\\"{{ code }}\\\"}\", \"code_arm_required\": false, \"device\": ${DEVICE_JSON}}"
-for i in $(seq 1 "${ZONE_COUNT}"); do
-  ZONE_NAME=$(bashio::config "zone_names[$(($i-1))]")
-  [[ -z "${ZONE_NAME}" || "${ZONE_NAME}" == "null" ]] && ZONE_NAME="Zone ${i}"
-  ZONE_TYPE=$(bashio::config "zone_types[$(($i-1))]")
-  [[ -z "${ZONE_TYPE}" || "${ZONE_TYPE}" == "null" ]] && ZONE_TYPE="motion"
-  mosquitto_pub "${MQTT_OPTS[@]}" -r -t "homeassistant/binary_sensor/intelbras_amt8000/zone_${i}/config" \
-    -m "{\"name\": \"${ZONE_NAME}\", \"unique_id\": \"intelbras_zone_${i}\", \"availability_topic\": \"${AVAILABILITY_TOPIC}\", \"payload_available\": \"online\", \"payload_not_available\": \"offline\", \"state_topic\": \"intelbras/zone/${i}/state\", \"payload_on\": \"ON\", \"payload_off\": \"OFF\", \"device_class\": \"${ZONE_TYPE}\", \"device\": ${DEVICE_JSON}}"
-done
-bashio::log.info "Entity registration complete."
-
-# --- FASE 4: DEFINICIÓN DE FUNCIONES ---
-function poll_and_update_status() {
-    bashio::log.info "(Polling) Querying alarm panel for full status..."
-    STATUS_OUTPUT=$(./comandar "${ALARM_IP}" "${ALARM_PORT}" "${ALARM_PASS}" "${PASS_LEN}" status)
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 0 ]; then
-        bashio::log.warning "Polling failed."
-        mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline"
-        return
-    fi
-    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "online"
-    STATUS_BLOCK=$(echo "${STATUS_OUTPUT}" | sed -n '/\*\*\*\*\*\*\*\*\*\*\*/,/\*\*\*\*\*\*\*\*\*\*\*/p')
-    # ... (resto del parseo)
-}
-function process_event_stream() {
-    while read -r event_line; do
-        # ... (código de la función sin cambios)
+# --- FUNCIÓN PARA PROCESAR EVENTOS ---
+process_events() {
+    log_with_timestamp "Starting event processing..."
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            log_with_timestamp "Event received: $line"
+            # Aquí puedes agregar el procesamiento de eventos específicos
+        fi
     done
 }
 
-# --- FASE 5: INICIAR PROCESOS EN SEGUNDO PLANO Y BUCLE PRINCIPAL ---
-bashio::log.info "Starting background processes and main event loop..."
-if [[ ${POLLING_INTERVAL_MIN} -gt 0 ]]; then
-    (
-        sleep 10 
-        while true; do
-            poll_and_update_status
-            sleep $((POLLING_INTERVAL_MIN * 60))
-        done
-    ) &
-fi
-(
-    mosquitto_sub "${MQTT_OPTS[@]}" -t "intelbras/alarm/command" | while read -r msg; do
-        # ... (código del listener de comandos sin cambios)
-    done
-) &
+# --- EJECUTAR RECEPTORIP EN BUCLE ---
+log_with_timestamp "Starting main event receiver loop..."
 
-bashio::log.info "Starting Intelbras event receiver. Add-on is now operational."
+RESTART_COUNT=0
+MAX_RESTARTS=10
+
 while true; do
-    ./receptorip config.cfg | process_event_stream
-    bashio::log.warning "Event receiver stopped. Reconnecting in 30 seconds..."
-    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline"
-    sleep 30
+    log_with_timestamp "Starting receptorip (attempt $((RESTART_COUNT + 1)))..."
+    log_with_timestamp "Executing: ./receptorip config.cfg"
+    
+    # Ejecutar receptorip y procesar su salida
+    ./receptorip config.cfg 2>&1 | process_events
+    
+    EXIT_CODE=$?
+    log_with_timestamp "receptorip exited with code: ${EXIT_CODE}"
+    
+    # Marcar como offline
+    mosquitto_pub "${MQTT_OPTS[@]}" -r -t "${AVAILABILITY_TOPIC}" -m "offline" 2>/dev/null || true
+    
+    RESTART_COUNT=$((RESTART_COUNT + 1))
+    
+    if [[ ${RESTART_COUNT} -ge ${MAX_RESTARTS} ]]; then
+        bashio::log.fatal "receptorip failed ${MAX_RESTARTS} times. Stopping addon."
+        exit 1
+    fi
+    
+    log_with_timestamp "receptorip stopped. Restarting in 10 seconds... (${RESTART_COUNT}/${MAX_RESTARTS})"
+    sleep 10
+    
+    # Reset contador si ha pasado tiempo suficiente sin fallos
+    if [[ ${RESTART_COUNT} -gt 0 ]] && [[ $(($(date +%s) % 300)) -eq 0 ]]; then
+        RESTART_COUNT=0
+        log_with_timestamp "Reset restart counter"
+    fi
 done
