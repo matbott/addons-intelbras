@@ -29,6 +29,9 @@ COPY alarme-intelbras /alarme-intelbras
 
 WORKDIR /alarme-intelbras
 
+# Dar permisos de ejecución a todos los archivos
+RUN find . -type f -exec chmod +x {} \;
+
 # Dar permisos de ejecución a los scripts y binarios
 # Ahora usamos rutas relativas gracias a WORKDIR
 RUN chmod a+x ./comandar && \
