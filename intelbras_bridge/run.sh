@@ -77,7 +77,7 @@ publish_alarm_panel_discovery() {
     local state_topic="intelbras/alarm/state"
 
     local payload='{'
-    payload+="\"name\":\"Painel de Alarme Intelbras\","
+    payload+="\"name\":\"Panel de Alarma Intelbras\","
     payload+="\"unique_id\":\"${uid}\","
     payload+="\"state_topic\":\"${state_topic}\","
     payload+="\"command_topic\":\"${command_topic}\","
@@ -85,6 +85,8 @@ publish_alarm_panel_discovery() {
     payload+="\"value_template\":\"{% if value == 'Armada' %}armed_away{% elif value == 'Desarmada' %}disarmed{% else %}disarmed{% endif %}\","
     payload+="\"payload_disarm\":\"DISARM\","
     payload+="\"payload_arm_away\":\"ARM_AWAY\","
+    payload+="\"code_arm_required\":false,"
+    payload+="\"code_disarm_required\":false,"
     payload+="\"device\":{\"identifiers\":[\"${DEVICE_ID}\"],\"name\":\"Alarme Intelbras\",\"model\":\"AMT-8000\",\"manufacturer\":\"Intelbras\"}"
     payload+='}'
 
