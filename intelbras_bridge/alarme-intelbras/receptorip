@@ -83,11 +83,11 @@ def dummy_gancho(*args, **kwargs):
     pass
 
 # Asignar funciones dummy en lugar de strings vacías
-Tratador.gancho_arquivo = dummy_gancho
-Tratador.gancho_central = dummy_gancho
-Tratador.gancho_ev = dummy_gancho
-Tratador.gancho_msg = dummy_gancho
-Tratador.gancho_watchdog = dummy_gancho
+Tratador.gancho_arquivo = ":"
+Tratador.gancho_central = ":"
+Tratador.gancho_ev = ":"
+Tratador.gancho_msg = ":"
+Tratador.gancho_watchdog = ":"
 
 Log.info(f"Creando servidor TCP en {host}:{port}")
 print(f"Creando servidor TCP en {host}:{port}")
