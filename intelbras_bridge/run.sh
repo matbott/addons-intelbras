@@ -85,6 +85,7 @@ publish_alarm_panel_discovery() {
     payload+="\"value_template\":\"{% if value == 'Armada' %}armed_away{% elif value == 'Desarmada' %}disarmed{% else %}disarmed{% endif %}\","
     payload+="\"payload_disarm\":\"DISARM\","
     payload+="\"payload_arm_away\":\"ARM_AWAY\","
+    payload+="\"supported_features\":[\"arm_away\"],"
     payload+="\"code_arm_required\":false,"
     payload+="\"code_disarm_required\":false,"
     payload+="\"device\":{\"identifiers\":[\"${DEVICE_ID}\"],\"name\":\"Alarme Intelbras\",\"model\":\"AMT-8000\",\"manufacturer\":\"Intelbras\"}"
