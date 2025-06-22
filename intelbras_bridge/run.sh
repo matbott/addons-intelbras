@@ -73,16 +73,28 @@ done
 log "Generating config.cfg..."
 cat > /alarme-intelbras/config.cfg << EOF
 [receptorip]
+; interface de rede e porta do Receptor IP
+; use addr 0.0.0.0 se não precisar direcionar a uma interface
 addr = 0.0.0.0
 port = ${ALARM_PORT}
+; Centrais cuja conexão aceitaremos - expressão regular
+; ID da central é no formato aa:bb:cc, minúsculo
 centrais = .*
+; Número máximo de centrais conectadas e autenticadas simultâneas
 maxconn = 1
+; endereço e porta da central de alarme
+; caddr pode ser 'auto' ou um endereço explícito
+; usados apenas para download de fotos de sensor IVP-8000 Pet Cam
 caddr = ${ALARM_IP}
 cport = ${ALARM_PORT}
+; senha de acesso remoto (usuário 98) e tamanho em digitos (4 ou 6)
+; usados apenas para download de fotos de sensor IVP-8000 Pet Cam
 senha = ${ALARM_PASS}
 tamanho = ${ZONE_COUNT}
+; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
 folder_dlfoto = .
-logfile = logfile.log
+; arquivo de log. Informar "None" para desligar
+logfile = receptorip.log
 EOF
 log "config.cfg ready."
 
