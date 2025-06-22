@@ -88,6 +88,8 @@ senha = ${ALARM_PASS}
 tamanho = ${ZONE_COUNT}
 ; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
 folder_dlfoto = .
+; archivo de log. Informar "None" para desligar
+logfile = None
 EOF
 log "config.cfg ready."
 
