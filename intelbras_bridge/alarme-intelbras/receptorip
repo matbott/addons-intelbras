@@ -3,9 +3,11 @@ import sys, os, configparser, re
 from alarmeitbl.myeventloop import Timeout, Log
 from alarmeitbl.tratador import *
 from alarmeitbl.tratador_fotos import *
+
 def usage():
     print("Modo de usar: %s <arquivo de configuração>" % sys.argv[0])
     sys.exit(1)
+
 def parse_config():
     if len(sys.argv) < 2:
         usage()
@@ -15,6 +17,7 @@ def parse_config():
         usage()
     cfg = cfgfile['receptorip']
     return cfg
+
 config = parse_config()
 host = ("" + config['addr']).lower().strip()
 port = int(config['port'])
@@ -25,13 +28,26 @@ tam_senha = int(config['tamanho'])
 centrais = re.compile("" + config['centrais'])
 maxconn = int(config['maxconn'])
 logfile = config["logfile"]
+
 Log.set_level(Log.INFO)
 if logfile != "None":
     Log.set_file(logfile)
+
 folder_dlfoto = config['folder_dlfoto']
+
+# Watchdog simplificado sin ganchos
+def watchdog(to_obj):
+    Log.info("receptor em funcionamento")
+    to_obj.reset(3600)
+
+Timeout.new("watchdog", 15, watchdog)
+
+# TratadorDeFotos sin gancho_arquivo (primer parámetro vacío)
 Tratador.tratador_de_fotos = TratadorDeFotos("", folder_dlfoto, caddr, cport, senha, tam_senha)
+
 def valida_central(id_central):
     return centrais.match(id_central)
+
 def centrais_conectadas():
     n = 0
     for h in Handler.items.values():
@@ -39,9 +55,35 @@ def centrais_conectadas():
             if h.central_identificada:
                n += 1
     return n
+
 def valida_maxconn():
     return centrais_conectadas() < maxconn
+
 Tratador.valida_central = valida_central
 Tratador.valida_maxconn = valida_maxconn
+
+# Remover los ganchos del Tratador
+Tratador.gancho_arquivo = ""
+Tratador.gancho_central = ""
+Tratador.gancho_ev = ""
+Tratador.gancho_msg = ""
+Tratador.gancho_watchdog = ""
+
 ev = TCPServerEventLoop((host, port), TCPListener, Tratador)
+
+# Función de monitoreo de centrales simplificada sin ganchos
+def central_nao_conectada(to_obj):
+    if not centrais_conectadas():
+        if central_nao_conectada.alarme <= 0:
+            central_nao_conectada.alarme = 1
+            Log.info("nenhuma central conectada")
+    else:
+        if central_nao_conectada.alarme > 0:
+            central_nao_conectada.alarme = 0
+            Log.info("central conectada")
+    to_obj.restart()
+
+central_nao_conectada.alarme = 0
+Timeout.new("central_nc", 3600, central_nao_conectada)
+
 ev.loop()
