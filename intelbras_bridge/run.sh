@@ -73,30 +73,21 @@ done
 log "Generating config.cfg..."
 cat > /alarme-intelbras/config.cfg << EOF
 [receptorip]
-; interface de rede e porta do Receptor IP
-; use addr 0.0.0.0 se não precisar direcionar a uma interface
 addr = 0.0.0.0
 port = ${ALARM_PORT}
-; Centrais cuja conexão aceitaremos - expressão regular
-; ID da central é no formato aa:bb:cc, minúsculo
 centrais = .*
-; Número máximo de centrais conectadas e autenticadas simultâneas
 maxconn = 1
-; endereço e porta da central de alarme
-; caddr pode ser 'auto' ou um endereço explícito
-; usados apenas para download de fotos de sensor IVP-8000 Pet Cam
 caddr = ${ALARM_IP}
 cport = ${ALARM_PORT}
-; senha de acesso remoto (usuário 98) e tamanho em digitos (4 ou 6)
-; usados apenas para download de fotos de sensor IVP-8000 Pet Cam
 senha = ${ALARM_PASS}
 tamanho = ${ZONE_COUNT}
-; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
 folder_dlfoto = .
-; arquivo de log. Informar "None" para desligar
 logfile = receptorip.log
 EOF
+
 log "config.cfg ready."
+log "Generated config.cfg content:"
+cat /alarme-intelbras/config.cfg
 
 log "Publishing availability and initial states..."
 mosquitto_pub "${MQTT_OPTS[@]}" -r -t "$AVAILABILITY_TOPIC" -m "online"
@@ -109,6 +100,32 @@ for i in $(seq 1 "$ZONE_COUNT"); do
 done
 
 log "Starting receptorip..."
+log "Testing receptorip with config..."
+# Probar si el receptorip puede al menos parsear el config
+if ! python3 -c "
+import sys, configparser
+cfgfile = configparser.ConfigParser()
+cfgfile.read('/alarme-intelbras/config.cfg')
+if 'receptorip' not in cfgfile:
+    print('ERROR: No receptorip section found')
+    sys.exit(1)
+cfg = cfgfile['receptorip']
+print('Config parsed successfully')
+print('addr:', cfg.get('addr', 'MISSING'))
+print('port:', cfg.get('port', 'MISSING'))
+print('caddr:', cfg.get('caddr', 'MISSING'))
+print('cport:', cfg.get('cport', 'MISSING'))
+print('senha:', cfg.get('senha', 'MISSING'))
+print('tamanho:', cfg.get('tamanho', 'MISSING'))
+print('folder_dlfoto:', cfg.get('folder_dlfoto', 'MISSING'))
+print('logfile:', cfg.get('logfile', 'MISSING'))
+print('centrais:', cfg.get('centrais', 'MISSING'))
+print('maxconn:', cfg.get('maxconn', 'MISSING'))
+" 2>&1; then
+    log "ERROR: Config validation failed"
+    exit 1
+fi
+
 declare -A ACTIVE_ZONES=()
 ./receptorip config.cfg 2>&1 | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
