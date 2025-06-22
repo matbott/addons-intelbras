@@ -2,8 +2,11 @@
 
 import sys, os, configparser, re
 
-from alarmeitbl.myeventloop import Timeout, Log, TCPServerEventLoop, TCPListener, Handler
-from alarmeitbl.tratador import Tratador
+# --- LÍNEAS DE IMPORTACIÓN CORREGIDAS ---
+# 'Timeout' y 'Log' vienen de 'myeventloop'
+from alarmeitbl.myeventloop import Timeout, Log
+# El resto de las clases principales vienen de 'tratador'
+from alarmeitbl.tratador import Tratador, TCPServerEventLoop, TCPListener, Handler
 from alarmeitbl.tratador_fotos import TratadorDeFotos
 
 def usage():
