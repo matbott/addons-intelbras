@@ -73,11 +73,6 @@ done
 log "Generating config.cfg..."
 cat > /alarme-intelbras/config.cfg << EOF
 [receptorip]
-gancho_arquivo = ./ganchos/gancho_arquivo
-gancho_central = ./ganchos/gancho_central
-gancho_ev = ./ganchos/gancho_ev
-gancho_msg = ./ganchos/gancho_msg
-gancho_watchdog = ./ganchos/gancho_watchdog
 addr = 0.0.0.0
 port = ${ALARM_PORT}
 centrais = .*
@@ -105,32 +100,6 @@ for i in $(seq 1 "$ZONE_COUNT"); do
 done
 
 log "Starting receptorip..."
-log "Testing receptorip with config..."
-# Probar si el receptorip puede al menos parsear el config
-if ! python3 -c "
-import sys, configparser
-cfgfile = configparser.ConfigParser()
-cfgfile.read('/alarme-intelbras/config.cfg')
-if 'receptorip' not in cfgfile:
-    print('ERROR: No receptorip section found')
-    sys.exit(1)
-cfg = cfgfile['receptorip']
-print('Config parsed successfully')
-print('addr:', cfg.get('addr', 'MISSING'))
-print('port:', cfg.get('port', 'MISSING'))
-print('caddr:', cfg.get('caddr', 'MISSING'))
-print('cport:', cfg.get('cport', 'MISSING'))
-print('senha:', cfg.get('senha', 'MISSING'))
-print('tamanho:', cfg.get('tamanho', 'MISSING'))
-print('folder_dlfoto:', cfg.get('folder_dlfoto', 'MISSING'))
-print('logfile:', cfg.get('logfile', 'MISSING'))
-print('centrais:', cfg.get('centrais', 'MISSING'))
-print('maxconn:', cfg.get('maxconn', 'MISSING'))
-" 2>&1; then
-    log "ERROR: Config validation failed"
-    exit 1
-fi
-
 declare -A ACTIVE_ZONES=()
 ./receptorip config.cfg 2>&1 | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
