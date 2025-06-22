@@ -26,7 +26,8 @@ centrais = re.compile("" + config['centrais'])
 maxconn = int(config['maxconn'])
 logfile = config["logfile"]
 Log.set_level(Log.INFO)
-#Log.set_file(logfile)
+if logfile != "None":
+    Log.set_file(logfile)
 folder_dlfoto = config['folder_dlfoto']
 Tratador.tratador_de_fotos = TratadorDeFotos("", folder_dlfoto, caddr, cport, senha, tam_senha)
 def valida_central(id_central):
