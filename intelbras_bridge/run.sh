@@ -8,6 +8,7 @@ log "=== Starting Intelbras MQTT Bridge Add-on (Discovery Mode v2) ==="
 
 ALARM_PORT=$(bashio::config 'alarm_port')
 ALARM_IP=$(bashio::config 'alarm_ip')
+ALARM_PASS=$(bashio::config 'alarm_password')
 ZONE_COUNT=$(bashio::config 'zone_count')
 BROKER=$(bashio::config 'mqtt_broker')
 PORT=$(bashio::config 'mqtt_port')
@@ -83,8 +84,8 @@ maxconn = 1
 caddr = ${ALARM_IP}
 cport = ${ALARM_PORT}
 ; senha de acesso remoto (usuário 98) e tamanho em digitos (4 ou 6)
-senha = ${PASS}
-tamanho = 6
+senha = ${ALARM_PASS}
+tamanho = ${ZONE_COUNT}
 ; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
 folder_dlfoto = .
 EOF
