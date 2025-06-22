@@ -73,6 +73,11 @@ done
 log "Generating config.cfg..."
 cat > /alarme-intelbras/config.cfg << EOF
 [receptorip]
+gancho_arquivo = ./ganchos/gancho_arquivo
+gancho_central = ./ganchos/gancho_central
+gancho_ev = ./ganchos/gancho_ev
+gancho_msg = ./ganchos/gancho_msg
+gancho_watchdog = ./ganchos/gancho_watchdog
 addr = 0.0.0.0
 port = ${ALARM_PORT}
 centrais = .*
