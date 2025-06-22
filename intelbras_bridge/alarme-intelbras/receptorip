@@ -27,26 +27,38 @@ senha = int(config['senha'])
 tam_senha = int(config['tamanho'])
 centrais = re.compile("" + config['centrais'])
 maxconn = int(config['maxconn'])
-logfile = config["logfile"]
+logfile = config.get("logfile", "receptorip.log")
 
 Log.set_level(Log.INFO)
 if logfile != "None":
     Log.set_file(logfile)
 
-folder_dlfoto = config['folder_dlfoto']
+Log.info(f"Iniciando receptor IP - Host: {host}, Port: {port}")
+Log.info(f"Central: {caddr}:{cport}, Senha: {senha}, Tamanho: {tam_senha}")
 
-# Watchdog simplificado sin ganchos
+folder_dlfoto = config.get('folder_dlfoto', '.')
+
+# Watchdog simplificado
 def watchdog(to_obj):
     Log.info("receptor em funcionamento")
+    print("receptor em funcionamento")  # Para debug
+    sys.stdout.flush()
     to_obj.reset(3600)
 
 Timeout.new("watchdog", 15, watchdog)
 
-# TratadorDeFotos sin gancho_arquivo (primer parámetro vacío)
-Tratador.tratador_de_fotos = TratadorDeFotos("", folder_dlfoto, caddr, cport, senha, tam_senha)
+# TratadorDeFotos simplificado
+try:
+    Tratador.tratador_de_fotos = TratadorDeFotos("", folder_dlfoto, caddr, cport, senha, tam_senha)
+    Log.info("TratadorDeFotos configurado")
+except Exception as e:
+    Log.error(f"Erro ao configurar TratadorDeFotos: {e}")
 
 def valida_central(id_central):
-    return centrais.match(id_central)
+    Log.info(f"Validando central: {id_central}")
+    resultado = centrais.match(id_central)
+    Log.info(f"Central {id_central} {'aceita' if resultado else 'rejeitada'}")
+    return resultado
 
 def centrais_conectadas():
     n = 0
@@ -54,36 +66,74 @@ def centrais_conectadas():
         if isinstance(h, Tratador):
             if h.central_identificada:
                n += 1
+    Log.info(f"Centrais conectadas: {n}")
     return n
 
 def valida_maxconn():
-    return centrais_conectadas() < maxconn
+    conectadas = centrais_conectadas()
+    pode_conectar = conectadas < maxconn
+    Log.info(f"Validando conexao: {conectadas}/{maxconn} - {'OK' if pode_conectar else 'LIMITE'}")
+    return pode_conectar
 
 Tratador.valida_central = valida_central
 Tratador.valida_maxconn = valida_maxconn
 
-# Remover los ganchos del Tratador
-Tratador.gancho_arquivo = ""
-Tratador.gancho_central = ""
-Tratador.gancho_ev = ""
-Tratador.gancho_msg = ""
-Tratador.gancho_watchdog = ""
+# Crear funciones dummy para los ganchos para evitar errores
+def dummy_gancho(*args, **kwargs):
+    pass
 
-ev = TCPServerEventLoop((host, port), TCPListener, Tratador)
+# Asignar funciones dummy en lugar de strings vacías
+Tratador.gancho_arquivo = dummy_gancho
+Tratador.gancho_central = dummy_gancho
+Tratador.gancho_ev = dummy_gancho
+Tratador.gancho_msg = dummy_gancho
+Tratador.gancho_watchdog = dummy_gancho
 
-# Función de monitoreo de centrales simplificada sin ganchos
+Log.info(f"Creando servidor TCP en {host}:{port}")
+print(f"Creando servidor TCP en {host}:{port}")
+sys.stdout.flush()
+
+try:
+    ev = TCPServerEventLoop((host, port), TCPListener, Tratador)
+    Log.info("Servidor TCP creado exitosamente")
+    print("Servidor TCP creado exitosamente")
+    sys.stdout.flush()
+except Exception as e:
+    Log.error(f"Error al crear servidor TCP: {e}")
+    print(f"Error al crear servidor TCP: {e}")
+    sys.exit(1)
+
+# Función de monitoreo simplificada
 def central_nao_conectada(to_obj):
-    if not centrais_conectadas():
+    conectadas = centrais_conectadas()
+    if not conectadas:
         if central_nao_conectada.alarme <= 0:
             central_nao_conectada.alarme = 1
-            Log.info("nenhuma central conectada")
+            Log.info("ALERTA: nenhuma central conectada")
+            print("ALERTA: nenhuma central conectada")
+            sys.stdout.flush()
     else:
         if central_nao_conectada.alarme > 0:
             central_nao_conectada.alarme = 0
-            Log.info("central conectada")
+            Log.info("Central reconectada")
+            print("Central reconectada")
+            sys.stdout.flush()
     to_obj.restart()
 
 central_nao_conectada.alarme = 0
-Timeout.new("central_nc", 3600, central_nao_conectada)
+Timeout.new("central_nc", 30, central_nao_conectada)  # Reducido a 30 segundos para debug
 
-ev.loop()
+Log.info("Iniciando loop principal...")
+print("Iniciando loop principal...")
+print("Aguardando conexoes de centrais de alarme...")
+sys.stdout.flush()
+
+try:
+    ev.loop()
+except KeyboardInterrupt:
+    Log.info("Interrompido pelo usuario")
+    print("Interrompido pelo usuario")
+except Exception as e:
+    Log.error(f"Erro no loop principal: {e}")
+    print(f"Erro no loop principal: {e}")
+    sys.exit(1)
