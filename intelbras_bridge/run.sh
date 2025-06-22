@@ -71,7 +71,7 @@ for i in $(seq 1 "$ZONE_COUNT"); do
 done
 
 log "Generating config.cfg..."
-cat > config.cfg << EOF
+cat > /alarme-intelbras/config.cfg << EOF
 [receptorip]
 ; interface de rede e porta do Receptor IP
 addr = 0.0.0.0
