@@ -8,7 +8,6 @@ log "=== Starting Intelbras MQTT Bridge Add-on (Discovery Mode v2) ==="
 
 ALARM_PORT=$(bashio::config 'alarm_port')
 ALARM_IP=$(bashio::config 'alarm_ip')
-ALARM_PASS=$(bashio::config 'alarm_password')
 ZONE_COUNT=$(bashio::config 'zone_count')
 BROKER=$(bashio::config 'mqtt_broker')
 PORT=$(bashio::config 'mqtt_port')
@@ -71,7 +70,7 @@ for i in $(seq 1 "$ZONE_COUNT"); do
 done
 
 log "Generating config.cfg..."
-cat > alarme-intelbras/config.cfg << EOF
+cat > config.cfg << EOF
 [receptorip]
 ; interface de rede e porta do Receptor IP
 addr = 0.0.0.0
@@ -84,8 +83,8 @@ maxconn = 1
 caddr = ${ALARM_IP}
 cport = ${ALARM_PORT}
 ; senha de acesso remoto (usuário 98) e tamanho em digitos (4 ou 6)
-senha = ${ALARM_PASS}
-tamanho = ${ZONE_COUNT}
+senha = ${PASS}
+tamanho = 6
 ; local de gravação dos arquivos de foto obtidos do IVP-8000 Pet Cam
 folder_dlfoto = .
 EOF
@@ -103,7 +102,7 @@ done
 
 log "Starting receptorip..."
 declare -A ACTIVE_ZONES=()
-./alarme-intelbras/receptorip alarme-intelbras/config.cfg 2>&1 | while IFS= read -r line; do
+./receptorip config.cfg 2>&1 | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     log "Event: $line"
 
