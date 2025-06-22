@@ -1,5 +1,5 @@
 name: "Intelbras MQTT Bridge"
-version: "3.0.5"
+version: "3.0.6"
 slug: "intelbras_bridge"
 description: "Full-featured bridge for Intelbras alarm panels (AMT-8000 and similar) via MQTT."
 url: "https://github.com/matbott/addons-intelbras"
@@ -24,16 +24,16 @@ ports_description:
 options:
   mqtt_broker: "core-mosquitto"
   mqtt_port: 1883
-  mqtt_user: "mqtt"
-  mqtt_password: "W00d5tock99."
+  mqtt_user: ""
+  mqtt_password: ""
   alarm_ip: ""
   alarm_port: 9009
   alarm_password: ""
   password_length: 6
   polling_interval_minutes: 5
   zone_count: 8
-  zone_names: []
-  zone_types: []
+  #zone_names: []
+  #zone_types: []
 schema:
   mqtt_broker: str
   mqtt_port: port
@@ -45,5 +45,5 @@ schema:
   password_length: int(4,6)
   polling_interval_minutes: int(0,1440)
   zone_count: int(1,64)
-  zone_names: [str]
-  zone_types: [str]
+  #zone_names: [str]
+  #zone_types: [str]
