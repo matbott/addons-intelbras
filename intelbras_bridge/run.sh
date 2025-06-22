@@ -94,7 +94,6 @@ maxconn = 1
 caddr = ${ALARM_IP}
 cport = ${ALARM_PORT}
 senha = ${ALARM_PASS}
-# --- CORRECCIÓN: Usar PASSWORD_LENGTH en lugar de ZONE_COUNT ---
 tamanho = ${PASSWORD_LENGTH}
 folder_dlfoto = .
 logfile = receptorip.log
