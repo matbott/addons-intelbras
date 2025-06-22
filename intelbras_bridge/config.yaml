@@ -1,5 +1,5 @@
 name: "Intelbras MQTT Bridge"
-version: "2.0.7"
+version: "2.0.8"
 slug: "intelbras_bridge"
 description: "Full-featured bridge for Intelbras alarm panels (AMT-8000 and similar) via MQTT."
 url: "https://github.com/matbott/addons-intelbras"
