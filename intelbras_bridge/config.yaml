@@ -9,6 +9,7 @@ arch:
   - armhf
   - armv7
   - i386
+icon: "icon.png"
 hassio_api: true
 homeassistant_api: true
 startup: "application"
